@@ -1,6 +1,7 @@
 #version 120
 
 varying vec2 texCoord;
+varying float currWaveHeight;
 
 uniform int worldTime; // OptiFine passes this
 
@@ -14,9 +15,10 @@ void main() {
                1000.0; // Scale down the time (adjust the divisor for speed)
 
   // Apply sine wave to the Y position of the vertex for the wave effect
-  float waveSpeed = 50;    // Control the speed of the wave
-  float waveHeight = 0.25; // Control the height of the wave
-  float wave = sin(texCoord.x * 10.0 + time * waveSpeed) * waveHeight;
+  float waveSpeed = 100;     // Control the speed of the wave
+  float maxWaveHeight = 0.1; // Control the height of the wave
+  currWaveHeight = sin(time * waveSpeed) * maxWaveHeight;
 
-  gl_Position.y += wave; // Add the wave displacement to the Y position
+  gl_Position.y += currWaveHeight - maxWaveHeight -
+                   0.1; // Add the wave displacement to the Y position
 }
