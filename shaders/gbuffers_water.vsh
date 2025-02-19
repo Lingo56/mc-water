@@ -1,24 +1,32 @@
 #version 120
 
+uniform sampler2D noise;
+uniform int worldTime;
+uniform vec3 cameraPosition; // Custom uniform for world space approximation
+
 varying vec2 texCoord;
 varying float currWaveHeight;
 
-uniform int worldTime; // OptiFine passes this
-
 void main() {
-  // Standard position transformation
-  gl_Position = ftransform();
   texCoord = gl_MultiTexCoord0.st;
 
-  // Normalize worldTime to get smooth animation
-  float time = float(worldTime) /
-               1000.0; // Scale down the time (adjust the divisor for speed)
+  // Approximate world position
+  vec3 worldPos = gl_Vertex.xyz + cameraPosition;
 
-  // Apply sine wave to the Y position of the vertex for the wave effect
-  float waveSpeed = 100;     // Control the speed of the wave
-  float maxWaveHeight = 0.1; // Control the height of the wave
-  currWaveHeight = sin(time * waveSpeed) * maxWaveHeight;
+  float time = float(worldTime) / 1000.0;
+  vec2 flowDirection = vec2(0.02, 0.01);
 
-  gl_Position.y += currWaveHeight - maxWaveHeight -
-                   0.1; // Add the wave displacement to the Y position
+  vec2 worldPosXZ = worldPos.xz;
+  vec2 noiseUV = fract(worldPosXZ * 0.05 + time * flowDirection);
+
+  float noiseValue = texture2D(noise, noiseUV).r;
+  float maxWaveHeight = 0.5;
+
+  currWaveHeight =
+      (sin(time + noiseValue * 6.2831) * 0.5 + 0.5) * maxWaveHeight;
+
+  vec4 pos = gl_Vertex;
+  pos.y += currWaveHeight - maxWaveHeight - 0.1;
+
+  gl_Position = ftransform();
 }
