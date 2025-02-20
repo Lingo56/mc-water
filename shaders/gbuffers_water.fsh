@@ -6,12 +6,14 @@ varying vec2 texCoord;
 varying float currWaveHeight;
 
 void main() {
+    // Sample the base water color
   vec4 color = texture2D(texture, texCoord);
 
-  // Add foam where waveHeight is close to the peak
-  float foam = smoothstep(0.07, 0.1, abs(currWaveHeight)); // Control the foam range
+    // Calculate foam — only at wave peaks
+  float foam = smoothstep(0.08, 0.1, abs(currWaveHeight)); // Narrow foam range
+  foam = clamp(foam, 0.0, 1.0);
 
-  // Mix the foam color (white) with the water color
+    // Mix foam with water color, but only where foam is significant
   vec3 foamColor = vec3(1.0); // White foam
   color.rgb = mix(color.rgb, foamColor, foam);
 
