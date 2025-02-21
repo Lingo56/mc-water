@@ -7,10 +7,9 @@ uniform vec3 cameraPosition;
 
 varying vec2 texCoord;
 varying float currWaveHeight;
+varying vec2 lmCoord; // Lightmap coordinates
 
 void main() {
-  texCoord = gl_MultiTexCoord0.st;
-
   // World position
   vec3 worldPos = gl_Vertex.xyz + cameraPosition;
 
@@ -41,4 +40,7 @@ void main() {
 
   // Apply vertical displacement based on the noise-driven wave height
   gl_Position.y += currWaveHeight - (maxWaveHeight * 0.5);
+
+  lmCoord = gl_MultiTexCoord1.xy;
+  texCoord = gl_MultiTexCoord0.st;
 }
