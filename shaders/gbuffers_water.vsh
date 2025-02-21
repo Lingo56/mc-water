@@ -1,13 +1,11 @@
 #version 120
 
 uniform sampler2D noise;
-uniform int worldTime;
 uniform float frameTimeCounter;
 uniform vec3 cameraPosition;
 
 varying vec2 texCoord;
 varying float currWaveHeight;
-varying vec2 lmCoord; // Lightmap coordinates
 varying vec4 color;
 
 void main() {
@@ -43,6 +41,5 @@ void main() {
   // Apply vertical displacement based on the noise-driven wave height
   gl_Position.y += currWaveHeight - (maxWaveHeight * 0.5);
 
-  lmCoord = gl_MultiTexCoord1.xy;
   texCoord = gl_MultiTexCoord0.xy;
 }
