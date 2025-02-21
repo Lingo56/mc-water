@@ -8,10 +8,12 @@ uniform vec3 cameraPosition;
 varying vec2 texCoord;
 varying float currWaveHeight;
 varying vec2 lmCoord; // Lightmap coordinates
+varying vec4 color;
 
 void main() {
   // World position
   vec3 worldPos = gl_Vertex.xyz + cameraPosition;
+  color = gl_Color;
 
   // Time calculation (smooth animation)
   float time = frameTimeCounter;
@@ -42,5 +44,5 @@ void main() {
   gl_Position.y += currWaveHeight - (maxWaveHeight * 0.5);
 
   lmCoord = gl_MultiTexCoord1.xy;
-  texCoord = gl_MultiTexCoord0.st;
+  texCoord = gl_MultiTexCoord0.xy;
 }
