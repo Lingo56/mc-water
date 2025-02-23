@@ -2,7 +2,7 @@
 
 uniform sampler2D gtexture;   // Base textures
 uniform sampler2D lightmap;
-uniform sampler2D noise;
+uniform sampler2D noisetex;
 uniform sampler2D waterNormal;
 uniform vec3 lightDir;
 uniform float frameTimeCounter;
@@ -40,7 +40,7 @@ void main() {
 
   // Compute wave height using noise
   vec2 animatedPos = fragWorldPos.xz / 12.0 + waveOffsetA;
-  float waveHeight = texture2D(noise, animatedPos).g * 0.2 * water;
+  float waveHeight = texture2D(noisetex, animatedPos).g * 0.2 * water;
 
   // Foam effect at wave peaks
   float foam = smoothstep(0.08, 0.1, abs(waveHeight));
