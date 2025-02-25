@@ -13,6 +13,18 @@ varying vec4 color;
 varying float mat;
 varying vec3 fragWorldPos;
 
+vec3 FlowUVW(vec2 uv, vec2 flowVector, float time, bool flowB) {
+  float phaseOffset = flowB ? 0.5 : 0;
+  float noise = texture2D(noisetex, texCoord).a;
+  float progress = fract(time + phaseOffset + noise);
+
+  vec3 uvw;
+  uvw.xy = uv - flowVector * progress;
+  uvw.z = 1 - abs(1 - 2 * progress);
+
+  return uvw;
+}
+
 void main() {
     // Sample base texture
   vec4 albedo = texture2D(gtexture, texCoord) * vec4(color.rgb, 1.0);
@@ -29,12 +41,14 @@ void main() {
     vec2 flowVector = texture2D(noisetex, texCoord).rg * 2.0 - 1.0;
     flowVector *= 0.06; // Scale down the flow strength
 
-        // Offset UV using a function similar to FlowUV()
-    float progress = fract(frameTimeCounter);
-    vec2 uv = texCoord - flowVector * progress;
+    vec3 uvwA = FlowUVW(texCoord, flowVector, frameTimeCounter, false);
+    vec3 uvwB = FlowUVW(texCoord, flowVector, frameTimeCounter, true);
+
+    vec4 texA = texture2D(gtexture, uvwA.xy) * uvwA.z;
+    vec4 texB = texture2D(gtexture, uvwB.xy) * uvwB.z;
 
         // Sample the texture with the animated UVs
-    vec4 c = texture2D(gtexture, uv) * vec4(color.rgb, 1.0);
+    vec4 c = (texA + texB) * vec4(color.rgb, 1.0);
 
     // **Alternative to foam: blend with a highlight color**
     float highlight = smoothstep(0.2, 0.8, length(flowVector));
