@@ -28,6 +28,14 @@ vec3 FlowUVW(vec2 uv, vec2 flowVector, vec2 jump, float tiling, float time, bool
   return uvw;
 }
 
+vec3 UnpackNormalGLSL(vec4 normalSample) {
+  vec3 normal = normalSample.rgb * 2.0 - 1.0; // Remap from [0,1] to [-1,1]
+  normal.z = sqrt(1.0 - clamp(dot(normal.xy, normal.xy), 0.0, 1.0)); // Reconstruct Z
+  return normal;
+}
+
+// TODO: Not sure if this approach gets water that looks good.
+// Need to find an approach that makes good water without normal maps and realtime light.
 void main() {
     // Sample base texture
   vec4 albedo = texture2D(gtexture, texCoord) * vec4(color.rgb, 1.0);
@@ -35,41 +43,39 @@ void main() {
     // Check if this fragment belongs to water
   float water = float(mat > 0.98 && mat < 1.02);
 
-    // **Detect if it's a top face**
+    // Detect if it's a top face
   bool isTopFace = abs(normalize(cross(dFdx(fragWorldPos), dFdy(fragWorldPos))).y) > 0.9;
 
-    // Apply wave effects **only on the top face**
+  vec3 finalNormal = vec3(0.0, 1.0, 0.0); // Default up-normal
+
   if(water > 0.5 && isTopFace) {
-        // Sample the flow map to get flow direction (similar to Unity's tex2D)
+        // Sample the flow map to get flow direction
     vec2 flowVector = texture2D(noisetex, texCoord).rg * 2.0 - 1.0;
-    flowVector *= 0.04; // Scale down the flow strength
+    flowVector *= 0.04;
 
     float noise = texture2D(noisetex, texCoord).a;
-    float speed = 0.5; // How fast the overall animation runs
+    float speed = 0.5;
     float time = (frameTimeCounter * speed) + noise;
 
-    vec2 jump = vec2(0.1, 0.1); // Constant that controls how much to jump UVs per loop
-    float tiling = 2.0; // Controls the UV scale (affects how texture is repeated and how fast the animation looks)
+    vec2 jump = vec2(0.1, 0.1);
+    float tiling = 2.0;
 
     vec3 uvwA = FlowUVW(texCoord, flowVector, jump, tiling, time, false);
     vec3 uvwB = FlowUVW(texCoord, flowVector, jump, tiling, time, true);
 
-    vec4 texA = texture2D(noisetex, uvwA.xy) * uvwA.z;
-    vec4 texB = texture2D(noisetex, uvwB.xy) * uvwB.z;
+    vec3 normalA = UnpackNormalGLSL(texture2D(waterNormal, uvwA.xy)) * uvwA.z;
+    vec3 normalB = UnpackNormalGLSL(texture2D(waterNormal, uvwB.xy)) * uvwB.z;
+    finalNormal = normalize(normalA + normalB); // Compute final normal
 
-        // Sample the texture with the animated UVs
-    vec4 c = (texA + texB) * vec4(color.rgb, 1.0);
+        // **Use Normal Height for Brightness**
+    float waveHeight = clamp(finalNormal.z, 0.0, 1.0); // Keep in valid range
+    vec3 waveColor = mix(albedo.rgb, vec3(1.0), waveHeight * 0.3); // Blend toward white
 
-    // **Alternative to foam: blend with a highlight color**
-    float highlight = smoothstep(0.2, 0.8, length(flowVector));
-    vec3 highlightColor = vec3(0.8, 0.9, 1.0); // Light blue highlight
-    albedo.rgb = mix(c.rgb, highlightColor, highlight * 0.2); // 20% blend
+    albedo.rgb = waveColor;
   }
 
     // Normalize lightmap coordinates (0-15 range → 0-1 range)
-  vec2 lightCoord = lmCoord / 16.0; 
-
-    // Sample Minecraft’s default lightmap
+  vec2 lightCoord = lmCoord / 16.0;
   vec3 lightColor = texture2D(lightmap, lightCoord).rgb;
 
     // Apply Minecraft’s lighting
