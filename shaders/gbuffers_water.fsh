@@ -13,13 +13,16 @@ varying vec4 color;
 varying float mat;
 varying vec3 fragWorldPos;
 
-vec3 FlowUVW(vec2 uv, vec2 flowVector, float time, bool flowB) {
+vec3 FlowUVW(vec2 uv, vec2 flowVector, vec2 jump, float tiling, float time, bool flowB) {
   float phaseOffset = flowB ? 0.5 : 0;
-  float noise = texture2D(noisetex, texCoord).a;
-  float progress = fract(time + phaseOffset + noise);
+  float progress = fract(time + phaseOffset);
 
   vec3 uvw;
   uvw.xy = uv - flowVector * progress;
+  uvw.xy *= tiling;
+  uvw.xy += phaseOffset;
+
+  uvw.xy += (time - progress) * jump;
   uvw.z = 1 - abs(1 - 2 * progress);
 
   return uvw;
@@ -39,10 +42,17 @@ void main() {
   if(water > 0.5 && isTopFace) {
         // Sample the flow map to get flow direction (similar to Unity's tex2D)
     vec2 flowVector = texture2D(noisetex, texCoord).rg * 2.0 - 1.0;
-    flowVector *= 0.06; // Scale down the flow strength
+    flowVector *= 0.04; // Scale down the flow strength
 
-    vec3 uvwA = FlowUVW(texCoord, flowVector, frameTimeCounter, false);
-    vec3 uvwB = FlowUVW(texCoord, flowVector, frameTimeCounter, true);
+    float noise = texture2D(noisetex, texCoord).a;
+    float speed = 0.5; // How fast the overall animation runs
+    float time = (frameTimeCounter * speed) + noise;
+
+    vec2 jump = vec2(0.1, 0.1); // Constant that controls how much to jump UVs per loop
+    float tiling = 2.0; // Controls the UV scale (affects how texture is repeated and how fast the animation looks)
+
+    vec3 uvwA = FlowUVW(texCoord, flowVector, jump, tiling, time, false);
+    vec3 uvwB = FlowUVW(texCoord, flowVector, jump, tiling, time, true);
 
     vec4 texA = texture2D(gtexture, uvwA.xy) * uvwA.z;
     vec4 texB = texture2D(gtexture, uvwB.xy) * uvwB.z;
