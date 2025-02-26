@@ -54,8 +54,8 @@ void main() {
     vec3 uvwA = FlowUVW(texCoord, flowVector, jump, tiling, time, false);
     vec3 uvwB = FlowUVW(texCoord, flowVector, jump, tiling, time, true);
 
-    vec4 texA = texture2D(gtexture, uvwA.xy) * uvwA.z;
-    vec4 texB = texture2D(gtexture, uvwB.xy) * uvwB.z;
+    vec4 texA = texture2D(noisetex, uvwA.xy) * uvwA.z;
+    vec4 texB = texture2D(noisetex, uvwB.xy) * uvwB.z;
 
         // Sample the texture with the animated UVs
     vec4 c = (texA + texB) * vec4(color.rgb, 1.0);
