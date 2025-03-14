@@ -9,6 +9,7 @@ varying vec2 lmCoord; // Lightmap coordinates
 varying vec4 color;
 varying float mat;
 varying vec3 fragWorldPos; // Pass world position to fragment shader
+varying vec3 viewPos; // Add this new varying
 
 void main() {
   // World position
@@ -34,4 +35,5 @@ void main() {
   gl_Position = ftransform();
   lmCoord = gl_MultiTexCoord1.xy;
   texCoord = gl_MultiTexCoord0.xy;
+  viewPos = (gl_ModelViewMatrix * gl_Vertex).xyz; // Calculate view-space position (camera-relative position)
 }

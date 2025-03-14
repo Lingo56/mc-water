@@ -10,6 +10,7 @@ varying vec2 lmCoord;
 varying vec4 color;
 varying float mat;
 varying vec3 fragWorldPos;
+varying vec3 viewPos;
 
 void main() {
     // Sample base texture
@@ -64,7 +65,25 @@ void main() {
         // Blend based on which region has a non-zero value
         vec3 waveColor = mix(lowNoiseColor, highNoiseColor, step(0.01, aboveThreshold));
         
-        albedo.rgb = waveColor;
+        // APPLY DISTANCE-BASED EFFECTS
+        // Calculate distance from camera using viewPos
+        float distanceToCamera = length(viewPos);
+        
+        // Adjust distance ranges based on Minecraft scale
+        float minDistance = 10.0;   // Start transition at this distance
+        float maxDistance = 50.0;   // Complete transition at this distance
+        
+        // Calculate transition factor (0.0 to 1.0) based on distance
+        float transitionFactor = clamp((distanceToCamera - minDistance) / (maxDistance - minDistance), 0.0, 1.0);
+        
+        // Create a darker version of the base water color (not the wave color)
+        // This ensures a flat, noiseless appearance at distance
+        float darkenFactor = 0.5;
+        vec3 distantColor = waterBaseColor * darkenFactor;
+        
+        // For distances beyond maxDistance, use the flat distant color with no wave patterns
+        // For closer distances, use the wave color with darkening effect
+        albedo.rgb = mix(waveColor, distantColor, transitionFactor);
     }
 
     // Normalize lightmap coordinates (0-15 range → 0-1 range)
