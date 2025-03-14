@@ -11,6 +11,30 @@ varying vec4 color;
 varying float mat;
 varying vec3 fragWorldPos;
 
+// Creates a more natural wave movement by combining multiple sine waves
+vec2 createNaturalWave(float time) {
+    // Primary wave motion - reduced frequencies
+    vec2 wave1 = vec2(
+        sin(time * 0.2) * 0.5, // reduced from 0.4 to 0.2
+        cos(time * 0.15) * 0.3 // reduced from 0.3 to 0.15
+    );
+    
+    // Secondary wave motion with different frequency - reduced frequencies
+    vec2 wave2 = vec2(
+        sin(time * 0.35 + 0.9) * 0.2, // reduced from 0.7 to 0.35
+        cos(time * 0.3 + 1.2) * 0.2 // reduced from 0.6 to 0.3
+    );
+    
+    // Tertiary small ripple effect - slightly reduced frequencies
+    vec2 wave3 = vec2(
+        sin(time * 0.7 + 0.5) * 0.1, // reduced from 1.1 to 0.7
+        cos(time * 0.8 + 0.7) * 0.1 // reduced from 1.3 to 0.8
+    );
+    
+    // Combine all waves
+    return wave1 + wave2 + wave3;
+}
+
 void main() {
     // Sample base texture
     vec4 albedo = texture2D(gtexture, texCoord) * vec4(color.rgb, 1.0);
@@ -22,25 +46,46 @@ void main() {
     bool isTopFace = abs(normalize(cross(dFdx(fragWorldPos), dFdy(fragWorldPos))).y) > 0.9;
 
     if(water > 0.5 && isTopFace) {
+        // The color variable contains Minecraft's biome water color
+        // Minecraft passes biome water coloring through the vertex color
+        vec3 waterBaseColor = color.rgb;
+        
         // Use world position coordinates for seamless tiling
         vec2 worldCoord = fragWorldPos.xz; // Use xz plane for top faces
         
         // Adjust the scale of the noise texture
-        float noiseScale = 0.02; // Smaller value for world coords (try 0.05-0.2)
+        float noiseScale = 0.02; 
         worldCoord *= noiseScale;
         
-        // Simple scrolling of the noise texture
-        float scrollSpeed = 0.005;
-        vec2 scrolledCoord = worldCoord + vec2(frameTimeCounter * scrollSpeed, frameTimeCounter * scrollSpeed * 0.7);
+        // Get composite wave motion
+        vec2 waveOffset = createNaturalWave(frameTimeCounter);
+        
+        // Apply complex wave motion to coordinates with some base movement
+        float baseScrollSpeed = 0.000000001;
+        vec2 scrolledCoord = worldCoord + 
+                            waveOffset * 0.008 +
+                            vec2(frameTimeCounter * baseScrollSpeed, frameTimeCounter * baseScrollSpeed * 0.7);
         
         // Ensure coordinates wrap properly for seamless tiling
         scrolledCoord = fract(scrolledCoord);
         
-        // Sample noise texture
+        // Sample noise texture (single layer)
         float noiseValue = texture2D(noisetex, scrolledCoord).r;
         
-        // Make water brighter as noise approaches 100%
-        vec3 waveColor = mix(albedo.rgb, vec3(1.0), noiseValue * 0.4);
+        // Create a time-varying power exponent that oscillates between min and max values
+        float minPower = 2.0;   // Minimum power (less pronounced effect)
+        float maxPower = 3.0;   // Maximum power (more pronounced effect)
+        float cycleSpeed = 0.5; // How fast the cycle completes (lower = slower)
+        
+        // Oscillate the power based on time
+        float timeCycle = sin(frameTimeCounter * cycleSpeed) * 0.5 + 0.5; // 0 to 1 cycle
+        float dynamicPower = mix(minPower, maxPower, timeCycle);
+        
+        // Apply the time-varying power to the noise
+        float adjustedNoise = pow(noiseValue, dynamicPower);
+        
+        // Use the adjusted noise value with mixing
+        vec3 waveColor = mix(waterBaseColor * 0.5, waterBaseColor * 1.5, adjustedNoise);
         
         albedo.rgb = waveColor;
     }
