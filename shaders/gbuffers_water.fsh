@@ -32,14 +32,28 @@ void main() {
         float noiseScale = 0.1; // Smaller value for world coords (try 0.05-0.2)
         worldCoord *= noiseScale;
         
-        // First noise layer - scrolling one direction
-        float scrollSpeed = 0.02;
-        vec2 scrolledCoord1 = worldCoord + vec2(frameTimeCounter * scrollSpeed, frameTimeCounter * scrollSpeed * 0.7);
+        // DISPLACEMENT MAP - Third noise layer with different scale and speed
+        float displacementScale = 0.5; // Scale for displacement coords (smaller = larger features)
+        vec2 displacementCoord = worldCoord * displacementScale;
+        float displacementSpeed = 0.01; // Slower speed for more stable displacement
+        vec2 scrolledDispCoord = displacementCoord + vec2(frameTimeCounter * displacementSpeed, -frameTimeCounter * displacementSpeed * 0.7);
+        scrolledDispCoord = fract(scrolledDispCoord);
+        
+        // Sample displacement noise
+        vec2 displacement = texture2D(noisetex, scrolledDispCoord).rg * 2.0 - 1.0; // Convert to -1 to 1 range
+        float displacementStrength = 0.03; // Adjust the strength of displacement
+        
+        // Apply displacement to the main noise coordinates
+        vec2 displacedCoord = worldCoord + displacement * displacementStrength;
+        
+        // First noise layer - scrolling one direction (with displacement)
+        float scrollSpeed = 0.007;
+        vec2 scrolledCoord1 = displacedCoord + vec2(frameTimeCounter * scrollSpeed, frameTimeCounter * scrollSpeed * 0.7);
         scrolledCoord1 = fract(scrolledCoord1);
         float noiseValue1 = texture2D(noisetex, scrolledCoord1).r;
         
-        // Second noise layer - scrolling opposite direction
-        vec2 scrolledCoord2 = worldCoord + vec2(-frameTimeCounter * scrollSpeed * 2, frameTimeCounter * scrollSpeed * 0.4);
+        // Second noise layer - scrolling opposite direction (with displacement)
+        vec2 scrolledCoord2 = displacedCoord + vec2(-frameTimeCounter * scrollSpeed * 2, frameTimeCounter * scrollSpeed * 0.4);
         scrolledCoord2 = fract(scrolledCoord2);
         float noiseValue2 = texture2D(noisetex, scrolledCoord2).r;
         
@@ -47,7 +61,7 @@ void main() {
         float combinedNoise = (noiseValue1 + noiseValue2) * 0.5;
         
         // Define two thresholds
-        float lowerThreshold = 0.38;
+        float lowerThreshold = 0.41;
         float upperThreshold = 0.7; // New higher threshold
         
         // Apply dual threshold system
@@ -78,7 +92,7 @@ void main() {
         
         // Create a darker version of the base water color (not the wave color)
         // This ensures a flat, noiseless appearance at distance
-        float darkenFactor = 0.5;
+        float darkenFactor = 0.7;
         vec3 distantColor = waterBaseColor * darkenFactor;
         
         // For distances beyond maxDistance, use the flat distant color with no wave patterns
