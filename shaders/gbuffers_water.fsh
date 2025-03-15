@@ -3,6 +3,7 @@
 uniform sampler2D gtexture;
 uniform sampler2D lightmap;
 uniform sampler2D noisetex;
+uniform sampler2D noisetex2; // Second noise texture for caustics
 uniform float frameTimeCounter;
 
 varying vec2 texCoord;
@@ -23,19 +24,18 @@ void main() {
 
     // Detect if it's a top face
     bool isTopFace = abs(normalize(cross(dFdx(fragWorldPos), dFdy(fragWorldPos))).y) > 0.9;
-
     if(water > 0.5 && isTopFace) {
         // Use world position coordinates for seamless tiling
         vec2 worldCoord = fragWorldPos.xz; // Use xz plane for top faces
         
         // Adjust the scale of the noise texture
-        float noiseScale = 0.1; // Smaller value for world coords (try 0.05-0.2)
+        float noiseScale = 0.02; // Smaller value for world coords (try 0.05-0.2)
         worldCoord *= noiseScale;
         
         // DISPLACEMENT MAP - Third noise layer with different scale and speed
-        float displacementScale = 0.5; // Scale for displacement coords (smaller = larger features)
+        float displacementScale = 0.6; // Scale for displacement coords (smaller = larger features)
         vec2 displacementCoord = worldCoord * displacementScale;
-        float displacementSpeed = 0.01; // Slower speed for more stable displacement
+        float displacementSpeed = 0.001; // Slower speed for more stable displacement
         vec2 scrolledDispCoord = displacementCoord + vec2(frameTimeCounter * displacementSpeed, -frameTimeCounter * displacementSpeed * 0.7);
         scrolledDispCoord = fract(scrolledDispCoord);
         
@@ -47,13 +47,13 @@ void main() {
         vec2 displacedCoord = worldCoord + displacement * displacementStrength;
         
         // First noise layer - scrolling one direction (with displacement)
-        float scrollSpeed = 0.007;
-        vec2 scrolledCoord1 = displacedCoord + vec2(frameTimeCounter * scrollSpeed, frameTimeCounter * scrollSpeed * 0.7);
+        float scrollSpeed = 0.0007;
+        vec2 scrolledCoord1 = displacedCoord + vec2(frameTimeCounter * scrollSpeed, frameTimeCounter * scrollSpeed);
         scrolledCoord1 = fract(scrolledCoord1);
         float noiseValue1 = texture2D(noisetex, scrolledCoord1).r;
         
         // Second noise layer - scrolling opposite direction (with displacement)
-        vec2 scrolledCoord2 = displacedCoord + vec2(-frameTimeCounter * scrollSpeed * 2, frameTimeCounter * scrollSpeed * 0.4);
+        vec2 scrolledCoord2 = displacedCoord + vec2(-frameTimeCounter * scrollSpeed, frameTimeCounter * scrollSpeed);
         scrolledCoord2 = fract(scrolledCoord2);
         float noiseValue2 = texture2D(noisetex, scrolledCoord2).r;
         
@@ -61,8 +61,8 @@ void main() {
         float combinedNoise = (noiseValue1 + noiseValue2) * 0.5;
         
         // Define two thresholds
-        float lowerThreshold = 0.41;
-        float upperThreshold = 0.7; // New higher threshold
+        float lowerThreshold = 0.3;
+        float upperThreshold = 0.8; // New higher threshold
         
         // Apply dual threshold system
         // Keep values below lowerThreshold and above upperThreshold
@@ -84,8 +84,8 @@ void main() {
         float distanceToCamera = length(viewPos);
         
         // Adjust distance ranges based on Minecraft scale
-        float minDistance = 10.0;   // Start transition at this distance
-        float maxDistance = 50.0;   // Complete transition at this distance
+        float minDistance = 8.0;   // Start transition at this distance
+        float maxDistance = 40.0;   // Complete transition at this distance
         
         // Calculate transition factor (0.0 to 1.0) based on distance
         float transitionFactor = clamp((distanceToCamera - minDistance) / (maxDistance - minDistance), 0.0, 1.0);
