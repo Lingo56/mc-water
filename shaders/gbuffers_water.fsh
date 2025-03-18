@@ -3,7 +3,7 @@
 uniform sampler2D gtexture;
 uniform sampler2D lightmap;
 uniform sampler2D noisetex;
-uniform sampler2D noisetex2; // Second noise texture for caustics
+uniform sampler2D colortex5;       // Use this for caustics
 uniform float frameTimeCounter;
 
 varying vec2 texCoord;
@@ -24,6 +24,7 @@ void main() {
 
     // Detect if it's a top face
     bool isTopFace = abs(normalize(cross(dFdx(fragWorldPos), dFdy(fragWorldPos))).y) > 0.9;
+
     if(water > 0.5 && isTopFace) {
         // Use world position coordinates for seamless tiling
         vec2 worldCoord = fragWorldPos.xz; // Use xz plane for top faces
@@ -32,14 +33,14 @@ void main() {
         float noiseScale = 0.02; // Smaller value for world coords (try 0.05-0.2)
         worldCoord *= noiseScale;
         
-        // DISPLACEMENT MAP - Third noise layer with different scale and speed
-        float displacementScale = 0.6; // Scale for displacement coords (smaller = larger features)
+        // DISPLACEMENT MAP - Using noisetex for displacement
+        float displacementScale = 0.4; // Scale for displacement coords (smaller = larger features)
         vec2 displacementCoord = worldCoord * displacementScale;
         float displacementSpeed = 0.001; // Slower speed for more stable displacement
         vec2 scrolledDispCoord = displacementCoord + vec2(frameTimeCounter * displacementSpeed, -frameTimeCounter * displacementSpeed * 0.7);
         scrolledDispCoord = fract(scrolledDispCoord);
         
-        // Sample displacement noise
+        // Sample displacement noise from noisetex
         vec2 displacement = texture2D(noisetex, scrolledDispCoord).rg * 2.0 - 1.0; // Convert to -1 to 1 range
         float displacementStrength = 0.03; // Adjust the strength of displacement
         
@@ -50,12 +51,34 @@ void main() {
         float scrollSpeed = 0.0007;
         vec2 scrolledCoord1 = displacedCoord + vec2(frameTimeCounter * scrollSpeed, frameTimeCounter * scrollSpeed);
         scrolledCoord1 = fract(scrolledCoord1);
-        float noiseValue1 = texture2D(noisetex, scrolledCoord1).r;
         
-        // Second noise layer - scrolling opposite direction (with displacement)
+        // Use gaux1 or fallback to noisetex
+        vec4 causticSample = texture2D(colortex5, scrolledCoord1);
+        
+        float sampleSum = causticSample.r + causticSample.g + causticSample.b + causticSample.a;
+        
+        if (sampleSum < 0.01) {
+            // Fallback to noisetex
+            causticSample = texture2D(noisetex, scrolledCoord1 * 2.37);
+        }
+        
+        float noiseValue1 = causticSample.r;
+        
+        // Second noise layer - similar approach
         vec2 scrolledCoord2 = displacedCoord + vec2(-frameTimeCounter * scrollSpeed, frameTimeCounter * scrollSpeed);
         scrolledCoord2 = fract(scrolledCoord2);
-        float noiseValue2 = texture2D(noisetex, scrolledCoord2).r;
+        
+        // Use gaux1 or fallback to noisetex
+        causticSample = texture2D(colortex5, scrolledCoord2);
+        
+        sampleSum = causticSample.r + causticSample.g + causticSample.b + causticSample.a;
+        
+        if (sampleSum < 0.01) {
+            // Fallback to noisetex
+            causticSample = texture2D(noisetex, scrolledCoord2 * 0.79);
+        }
+        
+        float noiseValue2 = causticSample.r;
         
         // Combine both noise patterns
         float combinedNoise = (noiseValue1 + noiseValue2) * 0.5;
