@@ -15,7 +15,7 @@ varying vec3 viewPos;
 
 // Apply displacement to world coordinates
 vec2 calculateDisplacement(vec2 worldCoord) {
-    float displacementScale = 0.4; // Scale for displacement coords
+    float displacementScale = 0.1; // Scale for displacement coords
     vec2 displacementCoord = worldCoord * displacementScale;
     float displacementSpeed = 0.001; // Slower speed for more stable displacement
     vec2 scrolledDispCoord = displacementCoord + vec2(frameTimeCounter * displacementSpeed, 
@@ -32,31 +32,24 @@ vec2 calculateDisplacement(vec2 worldCoord) {
 
 // Calculate caustic pattern
 vec3 calculateCaustics(vec2 worldCoord, vec3 waterBaseColor, bool useThreshold) {
-    float scrollSpeed = 0.001;
-    
-    // First caustic layer - use world coordinates for texture sampling
-    vec2 scrolledCoord1 = worldCoord + vec2(frameTimeCounter * scrollSpeed, frameTimeCounter * scrollSpeed);
+    float scrollSpeed = 0.002;
+
+    vec2 scrolledCoord1 = worldCoord + vec2(frameTimeCounter * scrollSpeed, frameTimeCounter * scrollSpeed * 0.7);
     scrolledCoord1 = fract(scrolledCoord1);
+    float noiseValue1 = texture2D(colortex5, scrolledCoord1).r;
     
-    float primaryNoiseScale = 1;
-    vec4 causticSample = texture2D(colortex5, scrolledCoord1 * primaryNoiseScale);
-    float noiseValue1 = causticSample.r;
-    
-    // Second caustic layer
-    vec2 scrolledCoord2 = worldCoord + vec2(-frameTimeCounter * scrollSpeed, frameTimeCounter * scrollSpeed);
+    // Second noise layer - scrolling opposite direction
+    vec2 scrolledCoord2 = worldCoord + vec2(-frameTimeCounter * scrollSpeed * 2, -frameTimeCounter * scrollSpeed * 0.4);
     scrolledCoord2 = fract(scrolledCoord2);
-    
-    float secondaryNoiseScale = 1;
-    causticSample = texture2D(colortex5, scrolledCoord2 * secondaryNoiseScale);
-    float noiseValue2 = causticSample.r;
+    float noiseValue2 = texture2D(colortex5, scrolledCoord2).r;
     
     // Combine both noise patterns
     float combinedNoise = (noiseValue1 + noiseValue2) * 0.5;
     
     if (useThreshold) {
         // Original threshold behavior
-        float lowerThreshold = 0.38;
-        float upperThreshold = 0.61;
+        float lowerThreshold = 0.42;
+        float upperThreshold = 0.6;
         
         // Apply dual threshold system
         float belowThreshold = combinedNoise * (1.0 - step(lowerThreshold, combinedNoise));
@@ -110,7 +103,7 @@ void main() {
         vec2 worldCoord = fragWorldPos.xz; // Use xz plane for top faces
         
         // Adjust the scale of the noise texture
-        float noiseScale = 0.02;
+        float noiseScale = 0.08;
         worldCoord *= noiseScale;
         
         // Apply displacement to coordinates
@@ -120,7 +113,7 @@ void main() {
         bool useThreshold = true; // Toggle this to enable/disable
         
         // Calculate caustic pattern using the new parameter
-        vec3 waveColor = calculateCaustics(worldCoord, waterBaseColor, useThreshold);
+        vec3 waveColor = calculateCaustics(displacedCoord, waterBaseColor, useThreshold);
         
         // Apply distance-based fading
         albedo.rgb = applyDistanceFade(waveColor, waterBaseColor, viewPos);
