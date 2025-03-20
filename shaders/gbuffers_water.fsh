@@ -85,8 +85,8 @@ vec3 applyDistanceFade(vec3 waveColor, vec3 waterBaseColor, vec3 viewPosition) {
     float farTransition = clamp((distanceToCamera - farMinDistance) / (farMaxDistance - farMinDistance), 0.0, 1.0);
     
     // Create target colors for the transitions
-    vec3 nearColor = mix(waterBaseColor, vec3(waterBaseColor.rgb), 0.7); // Darker, more transparent near color
-    vec3 farColor = waterBaseColor * 0.7; // Darker water in the distance
+    vec3 nearColor = waterBaseColor; // Darker, more transparent near color
+    vec3 farColor = waterBaseColor * 0.85; // Darker water in the distance
     
     // Apply both transitions
     vec3 result = waveColor;
