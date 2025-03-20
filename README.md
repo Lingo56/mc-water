@@ -1,15 +1,6 @@
 # MC Water Shader Pack
 
-A custom shader pack that enhances the water visuals in Minecraft.
-
-## Features
-
-- Realistic water reflections
-- Dynamic waves and ripples
-- Custom water color and transparency
-- Improved underwater visuals
-
-## Demo
+A simple water shader
 
 ![Demo Video](demo.mov)
 
