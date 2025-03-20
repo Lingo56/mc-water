@@ -2,7 +2,7 @@
 
 A simple water shader
 
-![Demo Video](https://github.com/Lingo56/mc-water/blob/main/demo.mov)
+https://github.com/user-attachments/assets/12df4b2c-dba5-4a04-afba-3ea472e8c092
 
 ## Installation
 
