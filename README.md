@@ -1,6 +1,6 @@
-# Scrolling Texture Water Shader
+# Scrolling Texture Water
 
-Water shader implemented with 2 layers of intersecting noise textures and a water normal as a displacement map.
+Shader implemented with 2 layers of intersecting noise textures and a water normal as a displacement map.
 
 https://github.com/user-attachments/assets/12df4b2c-dba5-4a04-afba-3ea472e8c092
 
