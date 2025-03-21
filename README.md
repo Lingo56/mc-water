@@ -1,6 +1,6 @@
-# Water Shader Pack
+# Scrolling Texture Water
 
-A simple water shader
+Shader implemented with 2 layers of intersecting noise textures and a water normal as a displacement map.
 
 https://github.com/user-attachments/assets/12df4b2c-dba5-4a04-afba-3ea472e8c092
 
@@ -13,4 +13,3 @@ https://github.com/user-attachments/assets/12df4b2c-dba5-4a04-afba-3ea472e8c092
 ## Requirements
 
 - Minecraft with OptiFine or similar shader-supporting mod
-- Recommended: GPU with decent shader support
