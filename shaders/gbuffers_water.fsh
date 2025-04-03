@@ -13,33 +13,17 @@ varying float mat;
 varying vec3 fragWorldPos;
 varying vec3 viewPos;
 
-// Apply displacement to world coordinates
-vec2 calculateDisplacement(vec2 worldCoord) {
-    float displacementScale = 0.04; // Scale for displacement coords
-    vec2 displacementCoord = worldCoord * displacementScale;
-    float displacementSpeed = 0.001; // Slower speed for more stable displacement
-    vec2 scrolledDispCoord = displacementCoord + vec2(frameTimeCounter * displacementSpeed, 
-                                                     -frameTimeCounter * displacementSpeed * 0.7);
-    scrolledDispCoord = fract(scrolledDispCoord);
-    
-    // Sample displacement noise from noisetex
-    vec2 displacement = texture2D(noisetex, scrolledDispCoord).rg * 2.0 - 1.0; // Convert to -1 to 1 range
-    float displacementStrength = 0.6; // Adjust the strength of displacement
-    
-    // Return the displaced coordinates
-    return worldCoord + displacement * displacementStrength;
-}
-
 // Calculate caustic pattern
 vec3 calculateCaustics(vec2 worldCoord, vec3 waterBaseColor, bool useThreshold) {
     float scrollSpeed = 0.03;
 
-    vec2 scrolledCoord1 = (worldCoord * 1.1) + vec2(frameTimeCounter * scrollSpeed, -frameTimeCounter * scrollSpeed * 0.7);
-    scrolledCoord1 = fract(scrolledCoord1);
+    // First noise layer
+    vec2 scrolledCoord1 = worldCoord + vec2(frameTimeCounter * scrollSpeed, -frameTimeCounter * scrollSpeed * 0.7);
+    scrolledCoord1 = fract(scrolledCoord1); // fract() forces values to be in [0, 1]
     float noiseValue1 = texture2D(colortex5, scrolledCoord1).r;
     
     // Second noise layer - scrolling opposite direction
-    vec2 scrolledCoord2 = (worldCoord ) + vec2(-frameTimeCounter * scrollSpeed * 2, frameTimeCounter * scrollSpeed * 0.4);
+    vec2 scrolledCoord2 = worldCoord + vec2(-frameTimeCounter * scrollSpeed * 2, frameTimeCounter * scrollSpeed * 0.4);
     scrolledCoord2 = fract(scrolledCoord2);
     float noiseValue2 = texture2D(colortex5, scrolledCoord2).r;
     
@@ -52,6 +36,7 @@ vec3 calculateCaustics(vec2 worldCoord, vec3 waterBaseColor, bool useThreshold) 
         float upperThreshold = 0.76;
         
         // Apply dual threshold system
+        // Step gives 0.0 or 1.0 based on the threshold
         float belowThreshold = combinedNoise * (1.0 - step(lowerThreshold, combinedNoise));
         float aboveThreshold = combinedNoise * step(upperThreshold, combinedNoise);
         
@@ -68,9 +53,26 @@ vec3 calculateCaustics(vec2 worldCoord, vec3 waterBaseColor, bool useThreshold) 
     }
 }
 
+// Apply displacement to world coordinates
+vec2 calculateDisplacement(vec2 worldCoord) {
+    float displacementScale = 0.04; // Scale for displacement coords
+    vec2 displacementCoord = worldCoord * displacementScale;
+    float displacementSpeed = 0.001; // Slower speed for more stable displacement
+    vec2 scrolledDispCoord = displacementCoord + vec2(frameTimeCounter * displacementSpeed, 
+                                                     -frameTimeCounter * displacementSpeed * 0.7);
+    scrolledDispCoord = fract(scrolledDispCoord);
+    
+    // Sample displacement noise from noisetex
+    vec2 displacement = texture2D(noisetex, scrolledDispCoord).rg * 2.0 - 1.0; // Change from [0,1] to [-1,1] range (allows water to move in negative directions)
+    float displacementStrength = 0.6; // Adjust the strength of displacement
+    
+    // Return the displaced coordinates
+    return worldCoord + displacement * displacementStrength;
+}
+
 // Apply distance-based effects with both near and far fading
-vec3 applyDistanceFade(vec3 waveColor, vec3 waterBaseColor, vec3 viewPosition) {
-    float distanceToCamera = length(viewPosition);
+vec3 applyDistanceFade(vec3 waveColor, vec3 waterBaseColor) {
+    float distanceToCamera = length(viewPos);
     
     // Near distance fading parameters
     float nearMinDistance = 3.5;   // Start near transition at this distance
@@ -85,7 +87,7 @@ vec3 applyDistanceFade(vec3 waveColor, vec3 waterBaseColor, vec3 viewPosition) {
     float farTransition = clamp((distanceToCamera - farMinDistance) / (farMaxDistance - farMinDistance), 0.0, 1.0);
     
     // Create target colors for the transitions
-    vec3 nearColor = waterBaseColor; // Darker, more transparent near color
+    vec3 nearColor = waterBaseColor;
     vec3 farColor = waterBaseColor * 0.85; // Darker water in the distance
     
     // Apply both transitions
@@ -129,7 +131,7 @@ void main() {
         vec3 waveColor = calculateCaustics(displacedCoord, waterBaseColor, useThreshold);
         
         // Apply distance-based fading
-        albedo.rgb = applyDistanceFade(waveColor, waterBaseColor, viewPos);
+        albedo.rgb = applyDistanceFade(waveColor, waterBaseColor);
     }
 
     // Normalize lightmap coordinates (0-15 range → 0-1 range)
